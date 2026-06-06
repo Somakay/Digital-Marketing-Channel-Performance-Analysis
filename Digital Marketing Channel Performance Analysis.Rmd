@@ -1,0 +1,99 @@
+---
+title: "Digital Marketing Channel Performance Analysis"
+author: "Somadina"
+date: "2026-06-06"
+output: html_document
+---
+
+```{r}
+#install packages
+install.packages("corrplot")
+install.packages("scales")
+install.packages("lubridate")
+```
+```{r}
+#load the libraries
+library(ggplot2)
+library(corrplot)
+library(scales)
+library(lubridate)
+library(tidyverse)
+```
+
+```{r}
+#load the dataset
+data <- read.csv("digital marketing campaign_cleaned.csv")
+summary(data)
+head(data)
+```
+```{r}
+#date formatting
+data$date <- as.Date(data$date, format = "%m/%d/%Y")
+data$month <- month(data$date, label = TRUE)
+glimpse(data)
+head(data)
+```
+
+```{r}
+#CTR trend analysis 
+monthly_ctr <- data %>%
+  group_by(month, platform)%>%
+  summarise(avg_CTR = mean(CTR), avg_ROAS = mean(ROAS), total_conversions = sum(conversions), .groups = "drop")
+#plotting the CTR trend by platform
+ggplot(monthly_ctr, aes(x=month, y=avg_CTR, color=platform, group=platform))+
+  geom_line(size = 1.2)+
+  geom_line(size = 2.5)+
+  labs(title = "Average CTR trend by platform", x ="Month", y ="Average CTR", color="Platform")+
+  theme_minimal(base_size = 13)
+```
+```{r}
+#ROI by campaign type
+roi_summary <- data %>%
+  group_by(campaign_type, platform)%>%
+  summarise(avg_ROAS = mean(ROAS), avg_CPA = mean(CPA), total_revenue =sum(revenue), total_spend =sum(ad_spend), .groups = "drop")
+#plotting the ROI by campaign type
+ggplot(roi_summary, aes(x=reorder(campaign_type, avg_ROAS), y=avg_ROAS, fill=platform))+
+  geom_col(position ="dodge")+
+  coord_flip()+
+  labs(title = "Average ROAS by Campaign Type and Platform", x="Campaign Type", y ="Average ROAS", fill = "Platform")+
+  theme_minimal(base_size=13)
+```
+```{r}
+#correlation analysis
+numeric_data <- data %>%
+  select(impressions, clicks, CTR, CPC, ad_spend, conversions, CPA, revenue, ROAS)
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+corrplot(cor_matrix, method="color", type="upper", tl.cex=0.8, addCoef.col = "black", number.cex=0.7, title="Correlation Matrix: Ad performance Metrics", mar=c(0,0,1,0))
+```
+```{r}
+#segment performance by platfrom
+segment_analysis <- data %>%
+  group_by(segment, platform) %>%
+  summarise(avg_ROAS = mean(ROAS), avg_CTR = mean(CTR), avg_CPA = mean(CPA),count = n(),.groups = "drop")
+
+ggplot(segment_analysis, aes(x = segment, y = avg_ROAS, fill = platform)) +
+  geom_col(position = "dodge") +
+  labs(
+    title = "Segment Performance by Platform",
+    x = "Segment", y = "Average ROAS", fill = "Platform"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal(base_size = 13)
+```
+```{r}
+final_summary <- data %>%
+  group_by(platform, campaign_type, industry) %>%
+  summarise(
+    avg_CTR = round(mean(CTR), 4),
+    avg_ROAS = round(mean(ROAS), 2),
+    avg_CPA = round(mean(CPA), 2),
+    total_revenue = round(sum(revenue), 2),
+    total_spend = round(sum(ad_spend), 2),
+    total_conversions = sum(conversions),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(avg_ROAS))
+
+write.csv(final_summary, "C:/Users/Kay-okerulu Somadina/OneDrive/Pictures/Digital Marketing Channel Performance Analysis/r_summary_output.csv" , row.names = FALSE)
+```
+
